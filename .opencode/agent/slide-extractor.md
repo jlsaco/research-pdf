@@ -1,8 +1,19 @@
 ---
-name: slide-extractor
 description: Read-only PDF slide extraction. Reads the PDF visually via the Read tool with the `pages` param and via `pdftotext` for raw text, then produces structured per-slide content plus a global-context summary. Use as the first step of a deep-research run.
-tools: Read, Bash, Write
+mode: subagent
+tools:
+  read: true
+  bash: true
+  write: true
+  edit: false
+  webfetch: false
+  websearch: false
+  task: false
+  patch: false
 ---
+<!-- GENERATED FILE — DO NOT EDIT.
+     Source of truth: .claude/agents/slide-extractor.md
+     Regenerate with: python3 scripts/sync-opencode.py -->
 
 # Slide Extractor
 

@@ -1,8 +1,19 @@
 ---
-name: web-researcher
 description: Deep web research on ONE topic. English-first searching, prefers trusted sources from the config, and VERIFIES every link by fetching it before citing. Produces one findings file per topic.
-tools: WebSearch, WebFetch, Read, Write, Bash
+mode: subagent
+tools:
+  websearch: true
+  webfetch: true
+  read: true
+  write: true
+  bash: true
+  edit: false
+  task: false
+  patch: false
 ---
+<!-- GENERATED FILE — DO NOT EDIT.
+     Source of truth: .claude/agents/web-researcher.md
+     Regenerate with: python3 scripts/sync-opencode.py -->
 
 # Web Researcher
 

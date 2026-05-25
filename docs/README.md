@@ -31,6 +31,25 @@ deliverable, tailored to a **role**, a **language**, and a **depth**.
    claude -p "/deep-research input/my-deck.pdf --role \"Project Manager\" --language en --depth standard"
    ```
 
+### Running under OpenCode
+
+This repo also runs under [OpenCode](https://opencode.ai) from the same source.
+The orchestrator is exposed as the `/deep-research` command and the five
+subagents live under `.opencode/`:
+
+```bash
+# interactive
+opencode
+# then: /deep-research input/my-deck.pdf --role "Project Manager" --language en --depth standard
+
+# non-interactive
+opencode run "/deep-research input/my-deck.pdf --role \"Project Manager\" --language en --depth standard"
+```
+
+> `.opencode/` is **generated** from `.claude/` — never edit it by hand. After a
+> fresh clone, enable the auto-sync hook once: `git config core.hooksPath .githooks`.
+> See [ADR 0008](adr/0008-dual-runtime-claude-and-opencode.md) for the dual-runtime design.
+
 ## Parameters
 
 | Param      | Allowed values                  | Default            | How to pass it |
@@ -43,7 +62,7 @@ deliverable, tailored to a **role**, a **language**, and a **depth**.
 question (interactive runs only).
 
 > Non-interactive `claude -p` runs never prompt. Pass all params explicitly, or
-> ensure `.claude/research-config.yaml` defaults are set how you want.
+> ensure `research-config.yaml` defaults are set how you want.
 
 ### What each depth produces
 
@@ -74,7 +93,7 @@ topics).
 
 ## Customizing: trusted sources & sections
 
-Edit `.claude/research-config.yaml`:
+Edit `research-config.yaml`:
 
 - **Trusted sources** — under `trusted_sources:`. Add or remove domains the
   researcher prefers. Each entry has `name`, `url`, `tags`, and `priority`

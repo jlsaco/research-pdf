@@ -1,0 +1,12 @@
+#!/bin/sh
+# Keeps the OpenCode mirror (.opencode/) in sync with the Claude source of truth
+# (.claude/) on every commit. Enable once per clone with:
+#   git config core.hooksPath .githooks
+set -e
+
+# Only do work if the source of truth or the transpiler is part of this commit.
+if git diff --cached --name-only | grep -qE '^(\.claude/|scripts/sync-opencode\.py$)'; then
+  python3 scripts/sync-opencode.py
+  # Stage any regenerated files so they land in the same commit.
+  git add .opencode/
+fi

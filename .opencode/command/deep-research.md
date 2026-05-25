@@ -1,7 +1,13 @@
 ---
-name: deep-research
 description: Run a deep-research pass on a slide PDF — extract slides, map topics, research trusted English sources (verifying every link), and generate per-topic and per-slide markdown in the chosen language, role, and depth. Trigger when the user drops a PDF in input/ and asks to "deep research" / "research this document", or invokes /deep-research.
+agent: build
 ---
+<!-- GENERATED FILE — DO NOT EDIT.
+     Source of truth: .claude/skills/deep-research/SKILL.md
+     Regenerate with: python3 scripts/sync-opencode.py -->
+
+> **User request / arguments:** $ARGUMENTS
+> (Parse role/language/depth/pdf path from the line above per STEP 1.)
 
 # Deep Research (orchestrator)
 

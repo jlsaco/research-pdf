@@ -15,7 +15,7 @@ and `depth`.
 Resolve params in this order:
 
 1. Explicit prompt **args / flags** (`--role`, `--language`, `--depth`).
-2. Config **`defaults:`** in `.claude/research-config.yaml`.
+2. Config **`defaults:`** in `research-config.yaml`.
 3. Interactive **AskUserQuestion** — only when the run is interactive AND a
    value is still missing.
 

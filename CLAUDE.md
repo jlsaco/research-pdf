@@ -22,20 +22,35 @@ output/<slug>/                  # Deliverable per PDF (slug = hyphenated-lowerca
 docs/
   README.md                     # User-facing usage guide
   adr/                          # Architecture Decision Records (0001..)
-.claude/
-  skills/deep-research/         # Orchestrator skill (entry point)
-  agents/                       # The 5 specialized subagents
-  research-config.yaml          # User-editable config (defaults, sources, sections)
+research-config.yaml            # User-editable config (defaults, sources, sections) — SHARED
+.claude/                        # ◀ SOURCE OF TRUTH (edit here)
+  skills/deep-research/         #   Orchestrator skill (entry point)
+  agents/                       #   The 5 specialized subagents
+.opencode/                      # ◀ GENERATED from .claude/ — do not edit by hand
+  command/deep-research.md      #   Orchestrator as an OpenCode command (/deep-research)
+  agent/                        #   The 5 subagents in OpenCode frontmatter
+  agents -> agent, commands -> command  # compat symlinks (OpenCode dir-name ambiguity)
+opencode.json                   # OpenCode project config (points instructions at AGENTS.md)
+scripts/sync-opencode.py        # Transpiler: .claude/ -> .opencode/ (run / --check)
+.githooks/pre-commit            # Auto-regenerates .opencode/ on commit
 CLAUDE.md                       # This file
+AGENTS.md                       # Symlink -> CLAUDE.md (so OpenCode reads the same guide)
 ```
+
+> **Dual runtime:** this repo runs under both **Claude Code** and **OpenCode**
+> from one source. You ONLY edit `.claude/`, `research-config.yaml`, and
+> `CLAUDE.md`; `.opencode/` is generated. See
+> [ADR 0008](docs/adr/0008-dual-runtime-claude-and-opencode.md) and run
+> `python3 scripts/sync-opencode.py` after editing any agent/skill.
 
 ## How a run flows (orchestrator + 5 subagents)
 
 The `/deep-research` **orchestrator skill** resolves the 3 params (see below),
 then delegates in order:
 
-1. **slide-extractor** — reads the PDF (native Read tool `pages` for visuals +
-   `pdftotext` for text) into per-slide structured notes.
+1. **slide-extractor** — reads the PDF (`pdftoppm` rasterizes each page to PNG
+   for the visual pass + `pdftotext` for text; portable across both runtimes)
+   into per-slide structured notes.
 2. **topic-mapper** — clusters slides into topics and identifies prerequisite
    concepts; produces the topic map.
 3. **web-researcher** — one per topic. Searches the web **in English first**
@@ -67,7 +82,7 @@ Contains `README.md`, `topics/`, `slides/`, and intermediate artifacts under
 
 ## Editing trusted sources & sections
 
-All in `.claude/research-config.yaml`:
+All in `research-config.yaml`:
 
 - `trusted_sources:` — add/remove domains the researcher prefers (name, url,
   tags, priority).
