@@ -55,10 +55,15 @@ output/<slug>/                  # slug = your filename, lowercased + hyphenated
   README.md                     # index of topics and sections
   topics/<NN>-<slug>.md         # one researched topic per file
   sections/<NN>.md              # one file per source section
+  research.pdf                  # single-file PDF: README + topics + sections appendix
   .research/                    # intermediate artifacts
 ```
 
 Example: `input/My Deck.pdf` → `output/my-deck/`.
+
+The PDF is produced by the `pdf-exporter` agent after the reviewer passes;
+it needs `pandoc` and a LaTeX engine (`brew install pandoc` and
+`brew install --cask mactex-no-gui` on macOS).
 
 
 ## Done criterion

@@ -12,19 +12,20 @@ agent: build
 # Deep Research — the orchestrator
 
 This skill is the **conductor**. It does not do the work itself: it hands the
-work off to five specialised agents, in order, and waits for each one. Each
+work off to six specialised agents, in order, and waits for each one. Each
 agent is an LLM with a written brief (in plain text, like a job description);
 it reads the previous artifact, thinks, and writes the next one. The
 structure of the workflow lives in the briefs and in the files agents leave
 behind for each other, not in fixed code.
 
-The five agents (in order):
+The six agents (in order):
 
 1. `source-extractor` — reads the source file and describes every section.
 2. `topic-mapper` — clusters the sections into topics.
 3. `web-researcher` — researches ONE topic (one is launched per topic, in parallel).
 4. `md-author` — writes the final markdown in the chosen language.
 5. `research-reviewer` — audits the bundle for coverage and citation quality.
+6. `pdf-exporter` — packages the finished bundle into a single local PDF.
 
 ## Parameters (always ask)
 
@@ -78,8 +79,12 @@ Compute `<slug>` = the file's base name lowercased with hyphens (e.g.
    re-write a file with problems) and review again. **Cap: 3 iterations.**
    If problems remain after the third pass, list them in a "Known gaps"
    section of the README and stop.
-7. **Summarise.** Print: output folder, topic count, section count, review
-   verdict (and iteration count).
+7. **Export to PDF.** Once the review passes (or stops at the iteration
+   cap with documented gaps), launch `pdf-exporter` with the slug. It
+   produces `output/<slug>/research.pdf` — README as cover/index, topics
+   in order, sections as an appendix.
+8. **Summarise.** Print: output folder, topic count, section count, review
+   verdict (and iteration count), and the PDF path.
 
 ## Depth quick reference
 

@@ -36,6 +36,10 @@ agents in order:
 5. **`research-reviewer`** — checks coverage, link liveness, and that the
    citations actually back up the claims. The orchestrator may loop with
    targeted fixes (cap: **3 iterations**).
+6. **`pdf-exporter`** — packages the finished bundle into a single local
+   PDF (`output/<slug>/research.pdf`): README as cover/index, topics in
+   order, sections as an appendix. Needs `pandoc` + a LaTeX engine on the
+   host.
 
 Every brief lives as plain markdown in `.claude/`. If you want to change
 behaviour — for example, make the reviewer stricter, or let
@@ -55,7 +59,7 @@ for students** to add.
   `sections/`, and intermediate artifacts under `.research/`.
 - `.claude/` — **source of truth**, edit here.
   - `skills/deep-research/SKILL.md` — the orchestrator.
-  - `agents/*.md` — the five agents.
+  - `agents/*.md` — the six agents.
 - `.opencode/` — generated from `.claude/` so the same project also runs
   under OpenCode. Don't edit by hand; run
   `python3 scripts/sync-opencode.py` after touching any brief
