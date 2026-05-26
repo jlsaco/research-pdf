@@ -74,13 +74,20 @@ def map_tools(tools_csv: str) -> list[str]:
 
 
 def render_tools_block(allowed: list[str]) -> str:
+    # OpenCode's permission model: `edit` gates write, edit, and patch.
+    # If write or patch are whitelisted, edit must also be allowed, and vice
+    # versa — they share the same underlying permission bit.
+    expanded = set(allowed)
+    if "write" in expanded or "patch" in expanded:
+        expanded.add("edit")
+    if "edit" in expanded:
+        expanded.add("write")
+        expanded.add("patch")
     lines = ["tools:"]
-    seen = set()
-    for t in allowed:
+    for t in sorted(expanded):
         lines.append(f"  {t}: true")
-        seen.add(t)
     for t in RESTRICTED:
-        if t not in seen:
+        if t not in expanded:
             lines.append(f"  {t}: false")
     return "\n".join(lines)
 
