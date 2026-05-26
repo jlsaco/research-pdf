@@ -22,7 +22,6 @@ output/<slug>/                  # Deliverable per PDF (slug = hyphenated-lowerca
 docs/
   README.md                     # User-facing usage guide
   adr/                          # Architecture Decision Records (0001..)
-research-config.yaml            # User-editable config (defaults, sources, sections) — SHARED
 .claude/                        # ◀ SOURCE OF TRUTH (edit here)
   skills/deep-research/         #   Orchestrator skill (entry point)
   agents/                       #   The 5 specialized subagents
@@ -38,9 +37,9 @@ AGENTS.md                       # Symlink -> CLAUDE.md (so OpenCode reads the sa
 ```
 
 > **Dual runtime:** this repo runs under both **Claude Code** and **OpenCode**
-> from one source. You ONLY edit `.claude/`, `research-config.yaml`, and
-> `CLAUDE.md`; `.opencode/` is generated. See
-> [ADR 0008](docs/adr/0008-dual-runtime-claude-and-opencode.md) and run
+> from one source. You ONLY edit `.claude/` and `CLAUDE.md`; `.opencode/` is
+> generated. See [ADR 0008](docs/adr/0008-dual-runtime-claude-and-opencode.md)
+> and [ADR 0009](docs/adr/0009-always-interactive-no-config.md), and run
 > `python3 scripts/sync-opencode.py` after editing any agent/skill.
 
 ## How a run flows (orchestrator + 5 subagents)
@@ -54,25 +53,22 @@ then delegates in order:
 2. **topic-mapper** — clusters slides into topics and identifies prerequisite
    concepts; produces the topic map.
 3. **web-researcher** — one per topic. Searches the web **in English first**
-   using the trusted-source list in the config, and **verifies every link** is
-   live before citing it.
+   using a curated trusted-source list (inline in the agent), and **verifies
+   every link** is live before citing it.
 4. **md-author** — writes the final markdown in the chosen language/role/depth,
    following the fixed/optional section schema.
 5. **research-reviewer** — verifies coverage, link liveness, and that sources
    actually support the claims. May request fixes (looped up to `max_iterations`).
 
-## Param model + dual-input rule
+## Param model (always interactive)
 
 Three params: `role` (free text), `language` (`es`|`en`), `depth`
 (`quick`|`standard`|`deep`).
 
-Resolution order: **explicit flags/args → config `defaults:` → interactive
-AskUserQuestion** (only when the run is interactive AND a value is still
-missing).
-
-> **CRITICAL:** Non-interactive `claude -p` runs must **never block on input.**
-> When invoking non-interactively, pass ALL params explicitly (or rely on
-> config defaults). The AskUserQuestion fallback is interactive-only.
+The orchestrator **always asks the human** to confirm these via
+AskUserQuestion — there are no config defaults and no silent fallbacks. If the
+user already named a value in their prompt, it is offered as the recommended
+option to confirm. The run never proceeds on an unconfirmed parameter.
 
 ## Where outputs land
 
@@ -82,12 +78,14 @@ Contains `README.md`, `topics/`, `slides/`, and intermediate artifacts under
 
 ## Editing trusted sources & sections
 
-All in `research-config.yaml`:
+There is no config file — settings live inline next to the code that uses them:
 
-- `trusted_sources:` — add/remove domains the researcher prefers (name, url,
-  tags, priority).
-- `sections:` — the fixed/optional section lists and the depth→sections mapping.
-- `defaults:`, `max_iterations:`, and the `research:` rules also live here.
+- **Trusted sources** — the curated domain table in
+  `.claude/agents/web-researcher.md`.
+- **Sections** — the fixed/optional section schema in
+  `.claude/agents/md-author.md` and the Depth reference in
+  `.claude/skills/deep-research/SKILL.md`.
+- **Fix-loop cap** — `3 iterations`, set in the orchestrator's STEP 6.
 
 ## Good-enough checklist (the stop condition)
 
@@ -97,7 +95,6 @@ A run is done when ALL hold:
 - [ ] Each topic has ≥1 general source **and** the required specific sources.
 - [ ] 0 broken links.
 - [ ] Cited sources actually support the claims made.
-- [ ] The run completes end-to-end via CLI with no human input.
 
-If the reviewer cannot satisfy these within `max_iterations`, the run stops and
-documents the remaining gaps.
+If the reviewer cannot satisfy these within the **3-iteration** fix-loop cap, the
+run stops and documents the remaining gaps.

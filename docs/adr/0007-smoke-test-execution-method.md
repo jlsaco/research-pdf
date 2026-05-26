@@ -1,7 +1,13 @@
 # 0007 — Smoke-test execution method
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR 0008](0008-always-interactive-no-config.md)
 - **Date:** 2026-05-24
+
+> **Superseded (2026-05-25):** the non-interactive `claude -p` headless path is
+> no longer the intended entry point — runs are now always interactive (ADR
+> 0008). The direct-orchestration validation method below remains accurate for
+> how the sample bundle was produced; the headless framing does not. Kept for
+> history.
 
 ## Context
 

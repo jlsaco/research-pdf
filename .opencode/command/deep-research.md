@@ -11,7 +11,7 @@ agent: build
 
 # Deep Research (orchestrator)
 
-You orchestrate a multi-agent deep-research pass over a slide PDF and emit a structured markdown bundle. Run the steps below in order, delegating to subagents via the **Task** tool. Read defaults, trusted sources, the section schema, the depth mapping, and `max_iterations` from `research-config.yaml`.
+You orchestrate a multi-agent deep-research pass over a slide PDF and emit a structured markdown bundle. Run the steps below in order, delegating to subagents via the **Task** tool. All settings (trusted sources, the section schema, the depth mapping, the fix-loop cap) are defined **inline** in this skill and its subagents — there is no external config file.
 
 ## Contract / layout
 - Per-run dir: `output/<slug>/` where `<slug>` = lowercased, hyphenated PDF basename
@@ -27,18 +27,24 @@ You orchestrate a multi-agent deep-research pass over a slide PDF and emit a str
 
 ---
 
-## STEP 1 — Param resolution (DUAL INPUT)
+## STEP 1 — Param resolution (ALWAYS ASK THE HUMAN)
 
-Resolve `pdf_path`, `role`, `language`, `depth` in this order:
-1. **Explicit args** in the user's prompt — flags or natural language.
-   - Flag form: `/deep-research input/NexusGuilds Week 4 Slides.pdf --role "Project Manager" --language en --depth standard`
-   - Natural language: "do a deep research on input/foo.pdf for a project manager in spanish, standard depth".
-2. **`defaults:`** in `research-config.yaml` for anything not given.
-3. **AskUserQuestion** — ONLY if the session is interactive AND a value is still missing.
+This run is **always interactive**: a human must confirm every parameter. There
+is no config file and no silent defaults.
 
-**PDF path:** if no path is given, default to the single PDF in `input/` when exactly one exists. (If `input/` has zero or multiple PDFs and none was specified, ask — interactive only — or fail with a clear message non-interactively.)
+Resolve `role`, `language`, `depth` by asking the human with **AskUserQuestion**:
+- If the user already named a value in their prompt, offer it as the
+  **recommended (first) option** so confirming is one click.
+- Otherwise present the suggested choices. Never proceed on an unconfirmed value.
 
-**CRITICAL — non-interactive runs must never block:** if all of `role`, `language`, `depth` are resolvable from args + config defaults, DO NOT ask any questions (required for `claude -p`). Only use `AskUserQuestion` when the session is interactive AND a parameter is genuinely still missing.
+Suggested choices:
+- `role` (free text — any value is valid): `Project Manager`, `AI Engineer`,
+  `Software Developer`, `Executive / Decision-maker`, `Student`.
+- `language`: `es` or `en`.
+- `depth`: `quick` | `standard` | `deep`.
+
+**PDF path:** if the user gave a path, use it. Otherwise auto-detect the single
+PDF in `input/`. If `input/` has zero or multiple PDFs, ask the human which one.
 
 Compute `<slug>` from the PDF basename (drop extension, lowercase, replace non-alphanumerics with single hyphens, trim hyphens).
 
@@ -72,14 +78,14 @@ Launch **`md-author`** subagents:
 - Cover EVERY slide → `slides/slide-<NN>.md` (one md-author can handle a batch of slides).
 - One for the bundle `README.md` (index of topics + slides + global summary + params).
 
-Parallelize sensibly (~4 concurrent). All output in the run's `language`, following the section schema and depth mapping from the config (see Depth reference below).
+Parallelize sensibly (~4 concurrent). All output in the run's `language`, following the section schema and depth mapping in the Depth reference below.
 
 ## STEP 6 — Review & iterate
 
 Launch **`research-reviewer`** with `slug`. It writes `output/<slug>/.research/review.md` and returns a verdict + issue list.
 
 - If verdict is **PASS** → go to Step 7.
-- If **FAIL** and the iteration count is below `max_iterations` (config, default **3**): dispatch TARGETED fixes for the listed issues only — re-run `web-researcher` for topics with missing/broken sources, re-run `md-author` for files with bad content/links/coverage — then re-run `research-reviewer`. Increment the iteration counter.
+- If **FAIL** and the iteration count is below the fix-loop cap of **3 iterations**: dispatch TARGETED fixes for the listed issues only — re-run `web-researcher` for topics with missing/broken sources, re-run `md-author` for files with bad content/links/coverage — then re-run `research-reviewer`. Increment the iteration counter.
 - If the cap is reached and issues remain: record the remaining gaps in a "Known gaps" section of `output/<slug>/README.md` and stop.
 
 ## STEP 7 — Final summary
@@ -88,7 +94,7 @@ Print: the output folder path (`output/<slug>/`), number of topics, number of sl
 
 ---
 
-## Depth reference (mirror of config)
+## Depth reference
 
 Topic FIXED sections: `Summary`, `Prerequisite concepts`, `Deep dive`, `Sources`, `References`.
 Topic OPTIONAL: `Why it matters for <role>`, `Hands-on`, `Common pitfalls`, `Going deeper`, `Glossary`, `Related slides & topics`.
@@ -100,5 +106,5 @@ Slide FIXED: `What this slide says`, `Key concepts`, `Linked topics`. Slide OPTI
 
 ## Research rules (enforced by web-researcher)
 - Search the WEB IN ENGLISH even when output is Spanish.
-- Prefer `trusted_sources` from `research-config.yaml`; need ≥1 general + depth-dependent specific sources per topic.
+- Prefer the curated trusted-source list (defined inline in the `web-researcher` agent); need ≥1 general + depth-dependent specific sources per topic.
 - VERIFY every link (WebFetch + optional `curl -sI`) before citing; never cite an unfetched or invented URL.

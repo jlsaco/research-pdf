@@ -1,7 +1,13 @@
 # 0008 — Dual runtime: Claude Code and OpenCode from one source
 
-- **Status:** Accepted
+- **Status:** Accepted (config-sharing portion superseded by [ADR 0009](0009-always-interactive-no-config.md))
 - **Date:** 2026-05-24
+
+> **Partial supersede (2026-05-25):** the dual-runtime mechanism (transpiler,
+> `.opencode/` mirror, `AGENTS.md` symlink, git hook) is unchanged. What ADR 0009
+> removed is the `research-config.yaml` itself — so references in this ADR to
+> sharing the YAML at repo root no longer apply. Settings are now inline in the
+> skill and agents and propagate to OpenCode via the same transpiler.
 
 ## Context
 

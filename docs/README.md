@@ -11,58 +11,52 @@ deliverable, tailored to a **role**, a **language**, and a **depth**.
    input/my-deck.pdf
    ```
 
-2. Run it. Two ways:
-
-   **Interactive** (Claude will ask for any missing params):
+2. Run it — the run is **always interactive**, so just start it:
 
    ```
    /deep-research
    ```
 
-   or just ask in natural language:
+   or ask in natural language:
 
    ```
    do a deep research on input/my-deck.pdf for a Project Manager, in English, standard depth
-   ```
-
-   **Non-interactive** (CLI — pass every param so nothing blocks):
-
-   ```bash
-   claude -p "/deep-research input/my-deck.pdf --role \"Project Manager\" --language en --depth standard"
    ```
 
 ### Running under OpenCode
 
 This repo also runs under [OpenCode](https://opencode.ai) from the same source.
 The orchestrator is exposed as the `/deep-research` command and the five
-subagents live under `.opencode/`:
+subagents live under `.opencode/`. Run it interactively the same way:
 
 ```bash
-# interactive
 opencode
-# then: /deep-research input/my-deck.pdf --role "Project Manager" --language en --depth standard
-
-# non-interactive
-opencode run "/deep-research input/my-deck.pdf --role \"Project Manager\" --language en --depth standard"
+# then: /deep-research
 ```
+
+Because every run is interactive (the orchestrator must ask the human to
+confirm params), use the interactive mode — `opencode run "…"` would skip the
+confirmation prompts.
 
 > `.opencode/` is **generated** from `.claude/` — never edit it by hand. After a
 > fresh clone, enable the auto-sync hook once: `git config core.hooksPath .githooks`.
-> See [ADR 0008](adr/0008-dual-runtime-claude-and-opencode.md) for the dual-runtime design.
+> See [ADR 0008](adr/0008-dual-runtime-claude-and-opencode.md) for the
+> dual-runtime design and [ADR 0009](adr/0009-always-interactive-no-config.md)
+> for the always-interactive decision.
+
 
 ## Parameters
 
-| Param      | Allowed values                  | Default            | How to pass it |
-| ---------- | ------------------------------- | ------------------ | -------------- |
-| `role`     | free text (any audience)        | `Project Manager`  | `--role "AI Engineer"`, natural language, or config default |
-| `language` | `es` \| `en`                    | `en`               | `--language es`, natural language, or config default |
-| `depth`    | `quick` \| `standard` \| `deep` | `standard`         | `--depth deep`, natural language, or config default |
+| Param      | Allowed values                  | How it's set |
+| ---------- | ------------------------------- | ------------ |
+| `role`     | free text (any audience)        | asked interactively |
+| `language` | `es` \| `en`                    | asked interactively |
+| `depth`    | `quick` \| `standard` \| `deep` | asked interactively |
 
-**Resolution order:** explicit flag/arg → config `defaults:` → interactive
-question (interactive runs only).
-
-> Non-interactive `claude -p` runs never prompt. Pass all params explicitly, or
-> ensure `research-config.yaml` defaults are set how you want.
+**The orchestrator always asks you to confirm all three** before it starts —
+there are no config defaults. If you already named a value in your prompt (e.g.
+"…for a Project Manager in English"), it's offered as the recommended option so
+confirming is one click.
 
 ### What each depth produces
 
@@ -93,25 +87,15 @@ topics).
 
 ## Customizing: trusted sources & sections
 
-Edit `research-config.yaml`:
+There is no config file — settings live inline next to the agent that uses them:
 
-- **Trusted sources** — under `trusted_sources:`. Add or remove domains the
-  researcher prefers. Each entry has `name`, `url`, `tags`, and `priority`
-  (`high`|`medium`):
-
-  ```yaml
-  trusted_sources:
-    - name: "My Internal Wiki"
-      url: "https://wiki.example.com"
-      tags: ["internal", "api"]
-      priority: high
-  ```
-
-- **Sections** — under `sections:`. Change the fixed/optional lists or the
-  `depth_mapping:` that controls which optional sections appear per depth.
-
-- **Defaults** — under `defaults:` (role/language/depth) and `max_iterations:`
-  (reviewer fix-loop cap).
+- **Trusted sources** — the domain table in `.claude/agents/web-researcher.md`
+  (columns: source, URL, good-for tags, priority). Add or remove rows there.
+- **Sections** — the fixed/optional section schema in
+  `.claude/agents/md-author.md`, and the Depth reference in
+  `.claude/skills/deep-research/SKILL.md` (which optional sections each depth
+  includes).
+- **Fix-loop cap** — `3 iterations`, in the orchestrator's STEP 6.
 
 ## Good-enough criterion
 
@@ -120,9 +104,8 @@ A run is considered complete when:
 - every slide is covered;
 - each topic has ≥1 general source plus the required specific sources for the
   depth;
-- there are 0 broken links;
-- the cited sources actually support the claims; and
-- the whole run completes via CLI with no human input.
+- there are 0 broken links; and
+- the cited sources actually support the claims.
 
-If these can't all be met within `max_iterations`, the run stops and documents
-the remaining gaps.
+If these can't all be met within the **3-iteration** fix-loop cap, the run stops
+and documents the remaining gaps.

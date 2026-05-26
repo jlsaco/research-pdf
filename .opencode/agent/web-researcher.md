@@ -1,5 +1,5 @@
 ---
-description: Deep web research on ONE topic. English-first searching, prefers trusted sources from the config, and VERIFIES every link by fetching it before citing. Produces one findings file per topic.
+description: Deep web research on ONE topic. English-first searching, prefers a curated trusted-source list, and VERIFIES every link by fetching it before citing. Produces one findings file per topic.
 mode: subagent
 tools:
   websearch: true
@@ -31,11 +31,30 @@ Write: `output/<slug>/.research/findings/<topic-slug>.md`.
 
 ## Procedure
 
-1. **Read the trusted-source list.** Read `research-config.yaml` and note its `trusted_sources` (domains/sites to prefer). Also note the `depth` mapping for source counts.
+1. **Use the curated trusted-source list below.** Prefer these domains — this is the canonical source list for the system (there is no external config file). `high` priority is tried first; `medium` are good secondary references; Wikipedia is the general/definitional fallback.
+
+   | Source | URL | Good for | Priority |
+   |--------|-----|----------|----------|
+   | Anthropic Docs | https://docs.anthropic.com | ai, llm, claude, agents, prompting, api | high |
+   | Claude Docs | https://docs.claude.com | ai, llm, claude, agents, prompting, api | high |
+   | OpenAI Platform Docs | https://platform.openai.com/docs | ai, llm, openai, gpt, api, agents | high |
+   | OpenAI Developers (Codex) | https://developers.openai.com | ai, llm, openai, codex, code-generation, api | high |
+   | Model Context Protocol (MCP) | https://modelcontextprotocol.io | mcp, agents, tools, integration, ai | high |
+   | Google AI / Gemini | https://ai.google.dev | ai, llm, gemini, google, api | high |
+   | MDN Web Docs | https://developer.mozilla.org | web, apis, javascript, http, browser, standards | high |
+   | Zapier | https://zapier.com | automation, no-code, integration, workflows | medium |
+   | Zapier Help Center | https://help.zapier.com | automation, no-code, integration, how-to | medium |
+   | Make (Integromat) | https://www.make.com | automation, no-code, integration, workflows | medium |
+   | Make Help Center | https://help.make.com | automation, no-code, integration, how-to | medium |
+   | n8n Docs | https://docs.n8n.io | automation, workflows, integration, self-hosted | medium |
+   | LangChain (Python) | https://python.langchain.com | ai, llm, agents, framework, orchestration, rag | medium |
+   | Wikipedia | https://en.wikipedia.org | general, definitions, background, fallback | medium |
+
+   Source counts per `depth`: `quick` = 1 general + 1 specific; `standard` = 1 general + 2-3 specific; `deep` = 1 general + 3-5 specific.
 
 2. **Search in ENGLISH.** Run the provided `queries` (and refine as needed) with `WebSearch`, using English query strings — even when the output `language` is `es`. The OUTPUT will be translated later; the RESEARCH is always done in English.
 
-3. **Prioritize trusted domains.** Among results, prefer links whose domain matches the config's `trusted_sources`. Always find:
+3. **Prioritize trusted domains.** Among results, prefer links whose domain matches the trusted-source list above. Always find:
    - **≥1 GENERAL / high-level source** for the topic, AND
    - **SPECIFIC sources** on the prerequisite concepts/subtopics, per depth:
      - `quick`: 1 general + 1 specific

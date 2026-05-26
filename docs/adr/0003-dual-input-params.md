@@ -1,7 +1,12 @@
 # 0003 — Dual-input parameter resolution
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR 0009](0009-always-interactive-no-config.md)
 - **Date:** 2026-05-24
+
+> **Superseded (2026-05-25):** the dual-input model (flags → config defaults →
+> interactive) and the non-blocking `claude -p` requirement were removed. Params
+> are now **always asked interactively**; there is no config file. See ADR 0009.
+> The original decision is kept below for history.
 
 ## Context
 
