@@ -77,7 +77,11 @@ Compute `<slug>` = the file's base name lowercased with hyphens (e.g.
    cap with documented gaps), launch `pdf-exporter` with the slug. It
    produces `output/<slug>/research.pdf` — README as cover/index, topics
    in order, sections as an appendix.
-8. **Summarise.** Print: output folder, topic count, section count, review
+8. **Open the PDF.** Run `open output/<slug>/research.pdf` (macOS) so the
+   reader sees the deliverable the moment the run ends. If `open` fails or
+   isn't available, fall back to printing the path — don't block the
+   summary on it.
+9. **Summarise.** Print: output folder, topic count, section count, review
    verdict (and iteration count), and the PDF path.
 
 ## Depth quick reference
