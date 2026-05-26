@@ -1,11 +1,11 @@
-# CLAUDE.md — Deep-Research for Technical Slide PDFs
+# CLAUDE.md — Deep-Research for Source Documents
 
 This is a teaching repo for what an **agentic workflow** looks like in
-practice. The job is small enough to fit in your head: a user drops a slide
-PDF into `input/`, asks for "deep research", and gets back a structured
-markdown bundle in `output/` — written for a chosen **role**, in a chosen
-**language** (`es` / `en`), at a chosen **depth** (`quick` / `standard` /
-`deep`).
+practice. The job is small enough to fit in your head: a user gives a
+source file (a slide PDF, an article, a markdown doc, plain text, …),
+asks for "deep research", and gets back a structured markdown bundle in
+`output/` — written for a chosen **role**, in a chosen **language**
+(`es` / `en`), at a chosen **depth** (`quick` / `standard` / `deep`).
 
 ## How it's wired
 
@@ -21,9 +21,12 @@ agents leave behind for each other, not in fixed code.
 The orchestrator asks the human for the three parameters, then calls these
 agents in order:
 
-1. **`slide-extractor`** — reads the PDF (visually + as text) and writes
-   per-slide notes.
-2. **`topic-mapper`** — groups the slides into topics and lists what a
+1. **`source-extractor`** — reads the source file (PDFs visually + as
+   text; other formats with the simplest tool that works) and writes
+   per-section notes. "Section" means whatever atomic unit fits the source
+   — a slide for a deck, a heading for an article, a topic shift for a
+   transcript.
+2. **`topic-mapper`** — groups the sections into topics and lists what a
    reader needs to know up front.
 3. **`web-researcher`** — one per topic, in parallel. Searches the web in
    English, judges sources with a quality rubric (not a fixed allow-list),
@@ -38,11 +41,18 @@ Every brief lives as plain markdown in `.claude/`. If you want to change
 behaviour — for example, make the reviewer stricter, or let
 `web-researcher` use different heuristics — you edit the prose, not code.
 
+## Input scope (today)
+
+The orchestrator accepts **one input: a file path**. The extractor figures
+out the format. Other input shapes — a URL, a free-text topic without a
+source document, a folder of files — are explicitly left as **exercises
+for students** to add.
+
 ## Layout
 
-- `input/` — drop slide PDFs here.
-- `output/<slug>/` — one folder per PDF, with `README.md`, `topics/`,
-  `slides/`, and intermediate artifacts under `.research/`.
+- `input/` — drop source files here (any format the extractor can read).
+- `output/<slug>/` — one folder per source, with `README.md`, `topics/`,
+  `sections/`, and intermediate artifacts under `.research/`.
 - `.claude/` — **source of truth**, edit here.
   - `skills/deep-research/SKILL.md` — the orchestrator.
   - `agents/*.md` — the five agents.
@@ -73,11 +83,12 @@ behaviour — for example, make the reviewer stricter, or let
 
 All of these must hold:
 
-- Every slide is covered.
+- Every section is covered (or the source had a single section, in which
+  case the bundle is README + topics only).
 - Each topic has at least one general source plus the required specific
   sources for the chosen depth.
 - Zero broken links.
 - Cited sources actually support the claims they're cited for.
 
-If the reviewer can't get there in 3 fix-loop iterations, the run stops and
-records the remaining gaps in the bundle's README.
+If the reviewer can't get there in 3 fix-loop iterations, the run stops
+and records the remaining gaps in the bundle's README.

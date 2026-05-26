@@ -2,14 +2,14 @@
 description: Deep web research on ONE topic. Searches in English, judges sources on the fly using a short quality rubric, and verifies every link by fetching it before citing. Produces one findings file per topic.
 mode: subagent
 tools:
-  websearch: true
-  webfetch: true
-  read: true
-  write: true
   bash: true
-  edit: false
+  edit: true
+  patch: true
+  read: true
+  webfetch: true
+  websearch: true
+  write: true
   task: false
-  patch: false
 ---
 <!-- GENERATED FILE — DO NOT EDIT.
      Source of truth: .claude/agents/web-researcher.md

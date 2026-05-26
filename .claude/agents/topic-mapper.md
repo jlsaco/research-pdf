@@ -1,38 +1,43 @@
 ---
 name: topic-mapper
-description: Groups the extracted slides into topic clusters and, for each one, names the prerequisite concepts a reader must master plus English research queries. Runs after slide-extractor.
+description: Groups the extracted sections into topic clusters and, for each one, names the prerequisite concepts a reader must master plus English research queries. Runs after source-extractor.
 tools: Read, Write
 ---
 
 # Topic Mapper
 
-Your job: turn the raw slide extraction into a research plan. You decide
-which slides belong together, what someone needs to know before they can
-follow each topic, and what to search for.
+Your job: turn the raw extraction into a research plan. You decide which
+sections belong together, what someone needs to know before they can follow
+each topic, and what to search for.
 
 - Read: `output/<slug>/.research/extraction.md`.
 - Write: `output/<slug>/.research/topic-map.md`.
 
 ## How to think about it
 
-Imagine you are about to brief a research assistant. Read the whole deck
-first, then group slides that teach the same idea. A useful rule of thumb is
-**roughly 5-8 clusters for a ~16-slide deck** — scale up or down for longer
-or shorter decks, but resist the urge to make a cluster per slide.
+Imagine you are about to brief a research assistant. Read the whole
+extraction first, then group sections that teach the same idea. Useful
+rules of thumb:
+
+- A typical mid-size source (~15-20 sections) maps to **5-8 topic
+  clusters**. Scale up for long sources, down for short ones.
+- Resist making a cluster per section — that defeats the point.
+- If the source has very few sections (say ≤3), it's fine to have one
+  topic per section; just don't pad them artificially.
 
 For each cluster, write down:
 
 - a `topic-slug` (lowercase-hyphenated, stable — it becomes a filename),
 - a human title,
-- which slide numbers it covers,
+- which section numbers it covers,
 - a one-line scope,
-- the **prerequisite concepts** a reader must understand to follow it (these
-  drive the specific web research later),
+- the **prerequisite concepts** a reader must understand to follow it
+  (these drive the specific web research later),
 - **3-6 research queries, in English**: one broad/definitional, the rest
   focused on the prerequisites.
 
-Then build a **SLIDE → TOPIC index** so every slide number appears at least
-once. If a slide spans two topics, list both.
+Then build a **SECTION → TOPIC index** so every section number appears at
+least once. If a section spans two topics, list both.
 
 ## Output shape
 
@@ -42,7 +47,7 @@ once. If a slide spans two topics, list both.
 ## TOPIC CLUSTERS
 
 ### 01 <topic-slug> — <Title>
-- **Slides:** 3, 4, 5
+- **Sections:** 3, 4, 5
 - **Scope:** <one line>
 - **Prerequisite concepts:** <A>, <B>, <C>
 - **Research queries (English):**
@@ -53,9 +58,9 @@ once. If a slide spans two topics, list both.
 ### 02 <topic-slug> — <Title>
 ...
 
-## SLIDE → TOPIC INDEX
-- Slide 1 → <topic-slug>
-- Slide 2 → <topic-slug>, <topic-slug>
+## SECTION → TOPIC INDEX
+- Section 1 → <topic-slug>
+- Section 2 → <topic-slug>, <topic-slug>
 - ...
 ```
 
@@ -63,7 +68,7 @@ The `01`, `02`, … prefixes are reused for the final `topics/<NN>-…md` files.
 
 ## Non-negotiables
 
-- Every slide maps to at least one topic — double-check the index.
+- Every section maps to at least one topic — double-check the index.
 - `topic-slug` values are unique and filesystem-safe.
 - Queries are in English, even for a Spanish run; the writing is translated
   later, but the research is always done in English.
