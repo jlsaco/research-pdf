@@ -1,5 +1,5 @@
 ---
-description: Run a deep-research pass on a slide PDF — extract slides, map topics, research trusted English sources (verifying every link), and generate per-topic and per-slide markdown in the chosen language, role, and depth. Trigger when the user drops a PDF in input/ and asks to "deep research" / "research this document", or invokes /deep-research.
+description: Run a deep-research pass on a slide PDF — extract slides, group them into topics, research the web (verifying every link), and write per-topic and per-slide markdown in the chosen language, role, and depth. Trigger when the user drops a PDF in input/ and asks to "deep research" / "research this document", or invokes /deep-research.
 agent: build
 ---
 <!-- GENERATED FILE — DO NOT EDIT.
@@ -9,102 +9,76 @@ agent: build
 > **User request / arguments:** $ARGUMENTS
 > (Parse role/language/depth/pdf path from the line above per STEP 1.)
 
-# Deep Research (orchestrator)
+# Deep Research — the orchestrator
 
-You orchestrate a multi-agent deep-research pass over a slide PDF and emit a structured markdown bundle. Run the steps below in order, delegating to subagents via the **Task** tool. All settings (trusted sources, the section schema, the depth mapping, the fix-loop cap) are defined **inline** in this skill and its subagents — there is no external config file.
+This skill is the **conductor**. It does not do the work itself: it hands the
+work off to five specialised agents, in order, and waits for each one. Each
+agent is an LLM with a written brief (in plain text, like a job description);
+it reads the previous artifact, thinks, and writes the next one. The
+structure of the workflow lives in the briefs and in the files agents leave
+behind for each other, not in fixed code.
 
-## Contract / layout
-- Per-run dir: `output/<slug>/` where `<slug>` = lowercased, hyphenated PDF basename
-  (e.g. `NexusGuilds Week 4 Slides.pdf` → `nexusguilds-week-4-slides`).
-- Intermediates: `output/<slug>/.research/` — `params.json`, `extraction.md`, `topic-map.md`, `findings/<topic-slug>.md`, `review.md`.
-- Deliverables: `output/<slug>/README.md`, `output/<slug>/topics/<NN>-<topic-slug>.md`, `output/<slug>/slides/slide-<NN>.md`.
-- Subagents: `slide-extractor`, `topic-mapper`, `web-researcher`, `md-author`, `research-reviewer`.
+The five agents (in order):
 
-## Parameters
-- `role`: free text (e.g. "Project Manager", "AI Engineer").
-- `language`: `es` or `en`.
-- `depth`: `quick` | `standard` | `deep`.
+1. `slide-extractor` — reads the PDF and describes every slide.
+2. `topic-mapper` — clusters the slides into topics.
+3. `web-researcher` — researches ONE topic (one is launched per topic, in parallel).
+4. `md-author` — writes the final markdown in the chosen language.
+5. `research-reviewer` — audits the bundle for coverage and citation quality.
 
----
+## Parameters (always ask)
 
-## STEP 1 — Param resolution (ALWAYS ASK THE HUMAN)
+Never assume values. Confirm all three with **AskUserQuestion** before
+starting. If the user already mentioned one in their prompt, offer it as the
+recommended option so they can confirm in one click.
 
-This run is **always interactive**: a human must confirm every parameter. There
-is no config file and no silent defaults.
+- `role` — free text (e.g. "Project Manager", "AI Engineer", "Student").
+- `language` — `es` or `en`.
+- `depth` — `quick`, `standard`, or `deep`.
 
-Resolve `role`, `language`, `depth` by asking the human with **AskUserQuestion**:
-- If the user already named a value in their prompt, offer it as the
-  **recommended (first) option** so confirming is one click.
-- Otherwise present the suggested choices. Never proceed on an unconfirmed value.
+About the PDF: if the user gave a path, use it. Otherwise look in `input/`.
+If there are zero or several PDFs, ask which one.
 
-Suggested choices:
-- `role` (free text — any value is valid): `Project Manager`, `AI Engineer`,
-  `Software Developer`, `Executive / Decision-maker`, `Student`.
-- `language`: `es` or `en`.
-- `depth`: `quick` | `standard` | `deep`.
+## Where outputs go
 
-**PDF path:** if the user gave a path, use it. Otherwise auto-detect the single
-PDF in `input/`. If `input/` has zero or multiple PDFs, ask the human which one.
+Compute `<slug>` = the PDF name lowercased with hyphens (e.g.
+`My Deck.pdf` → `my-deck`). The whole run lives under `output/<slug>/`:
 
-Compute `<slug>` from the PDF basename (drop extension, lowercase, replace non-alphanumerics with single hyphens, trim hyphens).
+- `output/<slug>/README.md` — bundle index.
+- `output/<slug>/topics/<NN>-<topic-slug>.md` — one file per topic.
+- `output/<slug>/slides/slide-<NN>.md` — one file per slide.
+- `output/<slug>/.research/` — intermediate artifacts (extraction, topic map,
+  findings, review, and `params.json` with the three params + date + pdf_path).
 
-Create the working dir and write params:
-```bash
-mkdir -p "output/<slug>/.research/findings" "output/<slug>/topics" "output/<slug>/slides"
-```
-Write `output/<slug>/.research/params.json`:
-```json
-{ "role": "<role>", "language": "<language>", "depth": "<depth>", "pdf_path": "<pdf_path>", "slug": "<slug>", "date": "<YYYY-MM-DD>" }
-```
+## The steps
 
----
+1. **Ask for the parameters** and save `params.json` under `.research/`.
+2. **Extract.** Launch `slide-extractor` with the PDF path and the slug. Wait.
+3. **Topic map.** Launch `topic-mapper` with the slug. Read the resulting
+   map to learn the topic list.
+4. **Research.** Launch one `web-researcher` per topic, in parallel
+   (cap at ~4 concurrent).
+5. **Author.** Launch `md-author` to write every topic, every slide, and the
+   README — also in parallel where possible.
+6. **Review.** Launch `research-reviewer`. If it passes, you're done. If it
+   fails, fire targeted fixes (re-research a topic that came up short,
+   re-write a file with problems) and review again. **Cap: 3 iterations.**
+   If problems remain after the third pass, list them in a "Known gaps"
+   section of the README and stop.
+7. **Summarise.** Print: output folder, topic count, slide count, review
+   verdict (and iteration count).
 
-## STEP 2 — Extract
+## Depth quick reference
 
-Launch the **`slide-extractor`** subagent (Task tool), passing `pdf_path` and `slug`. It writes `output/<slug>/.research/extraction.md` and reports the slide count. Confirm the file exists before continuing.
+Pass this to `web-researcher` and `md-author` — it defines how many sources
+and which sections each topic gets.
 
-## STEP 3 — Map topics
+| depth      | Sources per topic           | Topic sections                                        |
+|------------|-----------------------------|-------------------------------------------------------|
+| `quick`    | 1 general + 1 specific      | Fixed sections only, concise                          |
+| `standard` | 1 general + 2-3 specific    | Fixed + "Why it matters for <role>" + "Common pitfalls" |
+| `deep`     | 1 general + 3-5 specific    | Fixed + ALL optional sections, thorough               |
 
-Launch **`topic-mapper`** with `slug`. It reads `extraction.md` and writes `output/<slug>/.research/topic-map.md` (topic clusters + slide→topic index). Read `topic-map.md` yourself to get the list of topics (slug, title, slides, prerequisites, queries).
-
-## STEP 4 — Research (parallel)
-
-For EACH topic cluster, launch one **`web-researcher`** subagent. Run them in **parallel batches, ~4 concurrent max** (issue up to 4 Task calls in a single message, wait, then the next batch). Pass each: `slug`, `topic_slug`, `topic_title`, `prerequisite_concepts`, `queries`, and the params (`role`, `language`, `depth`). Each writes `output/<slug>/.research/findings/<topic-slug>.md` with verified sources. Confirm one findings file per topic exists.
-
-## STEP 5 — Author deliverables (parallel)
-
-Launch **`md-author`** subagents:
-- One per topic → `topics/<NN>-<topic-slug>.md` (uses the matching findings file).
-- Cover EVERY slide → `slides/slide-<NN>.md` (one md-author can handle a batch of slides).
-- One for the bundle `README.md` (index of topics + slides + global summary + params).
-
-Parallelize sensibly (~4 concurrent). All output in the run's `language`, following the section schema and depth mapping in the Depth reference below.
-
-## STEP 6 — Review & iterate
-
-Launch **`research-reviewer`** with `slug`. It writes `output/<slug>/.research/review.md` and returns a verdict + issue list.
-
-- If verdict is **PASS** → go to Step 7.
-- If **FAIL** and the iteration count is below the fix-loop cap of **3 iterations**: dispatch TARGETED fixes for the listed issues only — re-run `web-researcher` for topics with missing/broken sources, re-run `md-author` for files with bad content/links/coverage — then re-run `research-reviewer`. Increment the iteration counter.
-- If the cap is reached and issues remain: record the remaining gaps in a "Known gaps" section of `output/<slug>/README.md` and stop.
-
-## STEP 7 — Final summary
-
-Print: the output folder path (`output/<slug>/`), number of topics, number of slides, and the review verdict (and iteration count).
-
----
-
-## Depth reference
-
-Topic FIXED sections: `Summary`, `Prerequisite concepts`, `Deep dive`, `Sources`, `References`.
-Topic OPTIONAL: `Why it matters for <role>`, `Hands-on`, `Common pitfalls`, `Going deeper`, `Glossary`, `Related slides & topics`.
-Slide FIXED: `What this slide says`, `Key concepts`, `Linked topics`. Slide OPTIONAL: `Notes for <role>`.
-
-- `quick`: fixed sections only; 1 general + 1 specific source per topic; concise.
-- `standard`: fixed + "Why it matters for <role>" + "Common pitfalls"; 1 general + 2-3 specific sources.
-- `deep`: all optional sections; 1 general + 3-5 specific sources; thorough.
-
-## Research rules (enforced by web-researcher)
-- Search the WEB IN ENGLISH even when output is Spanish.
-- Prefer the curated trusted-source list (defined inline in the `web-researcher` agent); need ≥1 general + depth-dependent specific sources per topic.
-- VERIFY every link (WebFetch + optional `curl -sI`) before citing; never cite an unfetched or invented URL.
+Fixed topic sections: Summary / Prerequisite concepts / Deep dive / Sources /
+References. For slides: What this slide says / Key concepts / Linked topics
+(and "Notes for <role>" at `standard` and `deep`).

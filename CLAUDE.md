@@ -1,100 +1,83 @@
 # CLAUDE.md — Deep-Research for Technical Slide PDFs
 
-Guide for Claude sessions working in this repo.
+This is a teaching repo for what an **agentic workflow** looks like in
+practice. The job is small enough to fit in your head: a user drops a slide
+PDF into `input/`, asks for "deep research", and gets back a structured
+markdown bundle in `output/` — written for a chosen **role**, in a chosen
+**language** (`es` / `en`), at a chosen **depth** (`quick` / `standard` /
+`deep`).
 
-## What this project is
+## How it's wired
 
-An agentic deep-research system. A user drops a **technical slide PDF** into
-`input/`, runs `/deep-research` (a skill) or asks in natural language
-("do a deep research on this document"), and the system produces a structured,
-researched markdown deliverable in `output/`, written for a chosen **role**, in
-a chosen **language**, at a chosen **depth**.
+There is no fixed step-by-step diagram. There is an **orchestrator skill**
+(`/deep-research`) that decides what to do next and delegates to **agents**
+— each agent is an LLM with a written brief (in plain text, like a job
+description). They read the previous artifact, think, and write the next
+one. The structure of the workflow lives in the briefs and in the files
+agents leave behind for each other, not in fixed code.
 
-## Directory layout
+## How a run flows
 
-```
-input/                          # User drops slide PDFs here
-output/<slug>/                  # Deliverable per PDF (slug = hyphenated-lowercase PDF name)
-  README.md                     #   index / overview
-  topics/<NN>-<slug>.md         #   one file per researched topic
-  slides/slide-<NN>.md          #   one file per slide
-  .research/                    #   intermediate artifacts (extraction, topic map, notes)
-docs/
-  README.md                     # User-facing usage guide
-  adr/                          # Architecture Decision Records (0001..)
-.claude/                        # ◀ SOURCE OF TRUTH (edit here)
-  skills/deep-research/         #   Orchestrator skill (entry point)
-  agents/                       #   The 5 specialized subagents
-.opencode/                      # ◀ GENERATED from .claude/ — do not edit by hand
-  command/deep-research.md      #   Orchestrator as an OpenCode command (/deep-research)
-  agent/                        #   The 5 subagents in OpenCode frontmatter
-  agents -> agent, commands -> command  # compat symlinks (OpenCode dir-name ambiguity)
-opencode.json                   # OpenCode project config (points instructions at AGENTS.md)
-scripts/sync-opencode.py        # Transpiler: .claude/ -> .opencode/ (run / --check)
-.githooks/pre-commit            # Auto-regenerates .opencode/ on commit
-CLAUDE.md                       # This file
-AGENTS.md                       # Symlink -> CLAUDE.md (so OpenCode reads the same guide)
-```
+The orchestrator asks the human for the three parameters, then calls these
+agents in order:
 
-> **Dual runtime:** this repo runs under both **Claude Code** and **OpenCode**
-> from one source. You ONLY edit `.claude/` and `CLAUDE.md`; `.opencode/` is
-> generated. See [ADR 0008](docs/adr/0008-dual-runtime-claude-and-opencode.md)
-> and [ADR 0009](docs/adr/0009-always-interactive-no-config.md), and run
-> `python3 scripts/sync-opencode.py` after editing any agent/skill.
+1. **`slide-extractor`** — reads the PDF (visually + as text) and writes
+   per-slide notes.
+2. **`topic-mapper`** — groups the slides into topics and lists what a
+   reader needs to know up front.
+3. **`web-researcher`** — one per topic, in parallel. Searches the web in
+   English, judges sources with a quality rubric (not a fixed allow-list),
+   and verifies every link before citing it.
+4. **`md-author`** — writes the final markdown in the chosen language,
+   role, and depth.
+5. **`research-reviewer`** — checks coverage, link liveness, and that the
+   citations actually back up the claims. The orchestrator may loop with
+   targeted fixes (cap: **3 iterations**).
 
-## How a run flows (orchestrator + 5 subagents)
+Every brief lives as plain markdown in `.claude/`. If you want to change
+behaviour — for example, make the reviewer stricter, or let
+`web-researcher` use different heuristics — you edit the prose, not code.
 
-The `/deep-research` **orchestrator skill** resolves the 3 params (see below),
-then delegates in order:
+## Layout
 
-1. **slide-extractor** — reads the PDF (`pdftoppm` rasterizes each page to PNG
-   for the visual pass + `pdftotext` for text; portable across both runtimes)
-   into per-slide structured notes.
-2. **topic-mapper** — clusters slides into topics and identifies prerequisite
-   concepts; produces the topic map.
-3. **web-researcher** — one per topic. Searches the web **in English first**
-   using a curated trusted-source list (inline in the agent), and **verifies
-   every link** is live before citing it.
-4. **md-author** — writes the final markdown in the chosen language/role/depth,
-   following the fixed/optional section schema.
-5. **research-reviewer** — verifies coverage, link liveness, and that sources
-   actually support the claims. May request fixes (looped up to `max_iterations`).
+- `input/` — drop slide PDFs here.
+- `output/<slug>/` — one folder per PDF, with `README.md`, `topics/`,
+  `slides/`, and intermediate artifacts under `.research/`.
+- `.claude/` — **source of truth**, edit here.
+  - `skills/deep-research/SKILL.md` — the orchestrator.
+  - `agents/*.md` — the five agents.
+- `.opencode/` — generated from `.claude/` so the same project also runs
+  under OpenCode. Don't edit by hand; run
+  `python3 scripts/sync-opencode.py` after touching any brief
+  (the pre-commit hook does it automatically).
+- `docs/` — user guide and ADRs.
+- `AGENTS.md` — a symlink to this file, so OpenCode reads the same guide.
 
-## Param model (always interactive)
+> Dual-runtime detail: see [ADR 0008](docs/adr/0008-dual-runtime-claude-and-opencode.md)
+> and [ADR 0009](docs/adr/0009-always-interactive-no-config.md).
 
-Three params: `role` (free text), `language` (`es`|`en`), `depth`
-(`quick`|`standard`|`deep`).
+## What to keep in mind when editing briefs
 
-The orchestrator **always asks the human** to confirm these via
-AskUserQuestion — there are no config defaults and no silent fallbacks. If the
-user already named a value in their prompt, it is offered as the recommended
-option to confirm. The run never proceeds on an unconfirmed parameter.
+- **Plain prose, not scripts.** A brief is a job description. Snippets are
+  fine when they save a paragraph, but if you find yourself writing a
+  long bash recipe, ask whether you're telling the agent *what to do* or
+  *how to do it* — the agent is smart enough to figure out the *how*.
+- **No external config file.** Settings live next to the agent that uses
+  them: the source-quality rubric is in `web-researcher.md`, the section
+  schema is in `md-author.md`, the depth table is in the orchestrator
+  `SKILL.md`, and the fix-loop cap (3) is in the orchestrator's step 6.
+- **Always interactive.** The orchestrator asks the human to confirm the
+  three parameters every run. No silent defaults.
 
-## Where outputs land
+## When is a run done?
 
-`output/<slug>/` where `<slug>` is the PDF filename lowercased and hyphenated.
-Contains `README.md`, `topics/`, `slides/`, and intermediate artifacts under
-`.research/`.
+All of these must hold:
 
-## Editing trusted sources & sections
+- Every slide is covered.
+- Each topic has at least one general source plus the required specific
+  sources for the chosen depth.
+- Zero broken links.
+- Cited sources actually support the claims they're cited for.
 
-There is no config file — settings live inline next to the code that uses them:
-
-- **Trusted sources** — the curated domain table in
-  `.claude/agents/web-researcher.md`.
-- **Sections** — the fixed/optional section schema in
-  `.claude/agents/md-author.md` and the Depth reference in
-  `.claude/skills/deep-research/SKILL.md`.
-- **Fix-loop cap** — `3 iterations`, set in the orchestrator's STEP 6.
-
-## Good-enough checklist (the stop condition)
-
-A run is done when ALL hold:
-
-- [ ] Every slide is covered.
-- [ ] Each topic has ≥1 general source **and** the required specific sources.
-- [ ] 0 broken links.
-- [ ] Cited sources actually support the claims made.
-
-If the reviewer cannot satisfy these within the **3-iteration** fix-loop cap, the
-run stops and documents the remaining gaps.
+If the reviewer can't get there in 3 fix-loop iterations, the run stops and
+records the remaining gaps in the bundle's README.

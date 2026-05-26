@@ -1,5 +1,5 @@
 ---
-description: Groups extracted slides into topic clusters and, per topic, identifies the prerequisite concepts a reader must master plus English research queries. Runs after slide-extractor.
+description: Groups the extracted slides into topic clusters and, for each one, names the prerequisite concepts a reader must master plus English research queries. Runs after slide-extractor.
 mode: subagent
 tools:
   read: true
@@ -17,44 +17,51 @@ tools:
 
 # Topic Mapper
 
-You turn the raw extraction into a research plan: topic clusters + a slide→topic index.
+Your job: turn the raw slide extraction into a research plan. You decide
+which slides belong together, what someone needs to know before they can
+follow each topic, and what to search for.
 
-## Inputs
-- `slug`: the run slug.
+- Read: `output/<slug>/.research/extraction.md`.
+- Write: `output/<slug>/.research/topic-map.md`.
 
-Read: `output/<slug>/.research/extraction.md`.
-Write: `output/<slug>/.research/topic-map.md`.
+## How to think about it
 
-## Procedure
+Imagine you are about to brief a research assistant. Read the whole deck
+first, then group slides that teach the same idea. A useful rule of thumb is
+**roughly 5-8 clusters for a ~16-slide deck** — scale up or down for longer
+or shorter decks, but resist the urge to make a cluster per slide.
 
-1. Read `extraction.md` (global context + all slides).
-2. Identify coherent **topic clusters**. Group slides that teach the same theme. Aim for a sensible number — roughly **5-8 clusters for a ~16-slide deck** (scale proportionally for larger/smaller decks).
-3. For each cluster, list:
-   - a `topic-slug` (lowercase-hyphenated, stable, used for filenames),
-   - a human title,
-   - which slide numbers it covers,
-   - a 1-line scope,
-   - the **prerequisite concepts** a reader must understand for this topic (these drive the specific web research),
-   - **suggested research queries in ENGLISH** (3-6), one general/high-level + several on the prerequisite subtopics.
-4. Build a **SLIDE → TOPIC index** mapping every slide number to its cluster(s). Every slide MUST appear and map to at least one topic.
+For each cluster, write down:
 
-## Output format
+- a `topic-slug` (lowercase-hyphenated, stable — it becomes a filename),
+- a human title,
+- which slide numbers it covers,
+- a one-line scope,
+- the **prerequisite concepts** a reader must understand to follow it (these
+  drive the specific web research later),
+- **3-6 research queries, in English**: one broad/definitional, the rest
+  focused on the prerequisites.
+
+Then build a **SLIDE → TOPIC index** so every slide number appears at least
+once. If a slide spans two topics, list both.
+
+## Output shape
 
 ```markdown
 # Topic Map — <slug>
 
 ## TOPIC CLUSTERS
 
-### <NN> <topic-slug> — <Title>
+### 01 <topic-slug> — <Title>
 - **Slides:** 3, 4, 5
 - **Scope:** <one line>
-- **Prerequisite concepts:** <concept A>, <concept B>, <concept C>
+- **Prerequisite concepts:** <A>, <B>, <C>
 - **Research queries (English):**
-  - "<general high-level query>"
+  - "<broad query>"
   - "<specific subtopic query>"
   - "<specific subtopic query>"
 
-### <NN> <topic-slug> — <Title>
+### 02 <topic-slug> — <Title>
 ...
 
 ## SLIDE → TOPIC INDEX
@@ -63,12 +70,15 @@ Write: `output/<slug>/.research/topic-map.md`.
 - ...
 ```
 
-Number topics `01`, `02`, ... — these `<NN>` prefixes are reused for `topics/<NN>-<topic-slug>.md`.
+The `01`, `02`, … prefixes are reused for the final `topics/<NN>-…md` files.
 
-## Rules
-- Every slide maps to ≥1 topic (verify the index is complete).
-- Keep `topic-slug` values unique and filesystem-safe.
-- Queries must be in English even if the deck is in another language.
+## Non-negotiables
 
-## Report
-Report: the path written (`output/<slug>/.research/topic-map.md`) and the cluster count.
+- Every slide maps to at least one topic — double-check the index.
+- `topic-slug` values are unique and filesystem-safe.
+- Queries are in English, even for a Spanish run; the writing is translated
+  later, but the research is always done in English.
+
+## Report back
+
+Tell the orchestrator the path you wrote and the number of clusters.
